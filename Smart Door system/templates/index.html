@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OTP Verification</title>
+
+    <style>
+      body {
+        background-color: #333;
+        color: white;
+        font-family: Arial, sans-serif;
+        padding-bottom: 50px; /* Adjust as needed */
+      }
+
+      h1,
+      h2 {
+        padding: 20px;
+        text-align: center;
+      }
+
+      .container {
+        text-align: center;
+        margin-top: 50px; /* Adjust as needed */
+      }
+
+      input[type="tel"],
+      input[type="password"] {
+        padding: 10px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        margin-right: 10px; /* Adjust spacing */
+      }
+
+      button {
+        background-color: white;
+        color: black;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      button:hover {
+        background-color: red;
+        color: white;
+      }
+
+      #nav-toggle {
+        position: fixed;
+        top: 20px;
+        left: 0;
+        width: 50px;
+        height: 50px;
+        background-color: white;
+        color: black;
+        text-align: center;
+        line-height: 50px; /* Vertically center text */
+        cursor: pointer;
+        z-index: 999; /* Ensure it's on top of other elements */
+      }
+
+      #navbar {
+        position: fixed;
+        top: 0;
+        left: -250px; /* Initially hide the navbar */
+        width: 250px;
+        height: 100%;
+        background-color: #333; /* Change to your desired background color */
+        padding-top: 50px; /* Adjust as needed */
+        transition: left 0.3s; /* Smooth transition */
+      }
+
+      #navbar ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      #navbar ul li {
+        padding: 15px;
+        border-bottom: 1px solid #555; /* Adjust as needed */
+      }
+
+      #navbar ul li a {
+        color: white;
+        text-decoration: none;
+        font-size: 18px;
+      }
+
+      #navbar ul li a:hover {
+        background-color: #555; /* Adjust as needed */
+      }
+
+      footer {
+        background-color: grey;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+      }
+
+      #new-user-link {
+        position: absolute;
+        bottom: 30px;
+        right: 30px;
+        color: white;
+        text-decoration: none;
+        transition: color 0.3s;
+      }
+
+      #new-user-link:hover {
+        color: lightgrey;
+      }
+
+      /* Error message */
+      .error-message {
+        color: red;
+        font-size: 14px;
+        margin-top: 5px;
+      }
+      #otp-input {
+        margin-left: 43%;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>OTP VERIFICATION</h1>
+    <h2>Enter your phone number</h2>
+
+    <div id="nav-toggle" onclick="toggleNav()">≡</div>
+
+    <nav id="navbar">
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </nav>
+
+    <div class="container">
+      <form onsubmit="return false;">
+        <input
+          type="tel"
+          id="phone-input"
+          placeholder="Directly press otp button mobilenumber are already registered"
+          pattern="[0-9]{10}"
+          required
+          hidden
+        />
+        <span class="error-message" id="phone-error"></span>
+        <button onclick="showOTPInput()">Get OTP</button><br />
+        <br />
+        <input
+          type="password"
+          id="otp-input"
+          placeholder="Enter OTP"
+          style="display: none"
+        /><br />
+        <br />
+        <button onclick="submitOTP()" id="submit-otp-btn" style="display: none">
+          Submit OTP
+        </button>
+      </form>
+    </div>
+  </body>
+  <script
+    src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+    integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
+    crossorigin="anonymous"
+  ></script>
+  <!-- <script src="../static/index.js"></script> -->
+
+  <script>
+    var serverOtp = undefined;
+
+    function initializeSocket() {
+      socket = io("http://localhost:8001/", {
+        transports: ["websocket", "polling"],
+        auth: {
+          token: "abcd",
+        },
+        withCredentials: true,
+        extraHeaders: {
+          "my-custom-header": "abcd",
+        },
+      });
+
+      socket.on("connect", () => {
+        console.log("Connected to the server");
+      });
+
+      socket.emit("connected", "hello");
+
+      socket.on("disconnect", (reason) => {
+        if (reason === "io server disconnect") {
+          // the disconnection was initiated by the server, you need to reconnect manually
+          socket.connect();
+        }
+      });
+    }
+
+    // JavaScript function to toggle navigation visibility
+    function toggleNav() {
+      var navbar = document.getElementById("navbar");
+      var navToggle = document.getElementById("nav-toggle");
+      if (navbar.style.left === "0px") {
+        navbar.style.left = "-250px";
+        navToggle.innerHTML = "≡"; // Change toggle icon
+      } else {
+        navbar.style.left = "0px";
+        navToggle.innerHTML = "✕"; // Change toggle icon
+      }
+    }
+
+    // JavaScript function to show OTP input field
+    function showOTPInput() {
+      initializeSocket();
+
+      var otpInput = document.getElementById("otp-input");
+      var submitOTPBtn = document.getElementById("submit-otp-btn");
+      otpInput.style.display = "block";
+      submitOTPBtn.style.display = "inline-block"; // Show the submit OTP button
+      var phoneNumberInput = document.getElementById("phone-input");
+      var phoneNumberError = document.getElementById("phone-error");
+      var phoneNumber = phoneNumberInput.value;
+
+      socket.emit("connected", "Hello from client");
+      socket.emit("mobilenumber", phoneNumber);
+      socket.on("client_otp", (otp) => {
+        serverOtp = otp;
+        console.log("server otp", otp);
+      });
+      console.log("Server output", serverOtp);
+    }
+
+    // JavaScript function to validate phone number
+    function validatePhoneNumber() {
+      var phoneNumberInput = document.getElementById("phone-input");
+      var phoneNumberError = document.getElementById("phone-error");
+      var phoneNumber = phoneNumberInput.value;
+
+      // Regular expression to validate 10-digit phone number
+      var phoneRegex = /^\d{10}$/;
+
+      if (!phoneRegex.test(phoneNumber)) {
+        phoneNumberError.textContent =
+          "Please enter a valid 10-digit phone number.";
+        phoneNumberInput.focus();
+        return false;
+      } else {
+        phoneNumberError.textContent = "";
+        // Here, you can proceed with submitting the form or handling the OTP process
+        alert("Phone number is valid. Proceed with OTP process.");
+        return true;
+      }
+    }
+
+    // JavaScript function to submit OTP
+    function submitOTP() {
+      // const serverOtp = undefined;
+      socket.on("client_otp", (otp) => {
+        serverOtp = otp;
+        console.log("server otp", otp);
+      });
+      var otpInput = document.getElementById("otp-input");
+      var otp = otpInput.value;
+      console.log("Server output inside the submitotp", serverOtp);
+
+      if (serverOtp == otp) {
+        alert("Successfully OTP submitted: " + otp);
+      } else {
+        alert("Invalid OTP");
+      }
+
+      // Here you can handle the OTP submission, for example, sending it to the server for validation
+    }
+  </script>
+</html>
